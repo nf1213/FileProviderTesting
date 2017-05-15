@@ -220,6 +220,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    //region https://github.com/awslabs/aws-sdk-android-samples/blob/master/S3TransferUtilitySample/src/com/amazonaws/demo/s3transferutility/UploadActivity.java
     @SuppressLint("NewApi")
     private String getPath(Uri uri) throws URISyntaxException {
         final boolean needToCheckUri = Build.VERSION.SDK_INT >= 19;
@@ -297,6 +298,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public static boolean isMediaDocument(Uri uri) {
         return "com.android.providers.media.documents".equals(uri.getAuthority());
     }
+    //endregion
 
     private Uri getNewFileUri(Context context, int type) {
         File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(DIRECTORY_DCIM), "Camera");
