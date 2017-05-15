@@ -1,5 +1,6 @@
 package com.github.nf1213.fileprovidertesting;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ContentUris;
 import android.content.Context;
@@ -13,7 +14,10 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
@@ -29,6 +33,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import static android.os.Environment.DIRECTORY_DCIM;
 import static android.provider.MediaStore.ACTION_IMAGE_CAPTURE;
 import static android.provider.MediaStore.ACTION_VIDEO_CAPTURE;
 
@@ -36,6 +41,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private static final int REQUEST_CODE_TAKE_PHOTO_VIDEO = 3;
     private static final int REQUEST_CODE_OPEN_DOCUMENT = 4;
+
+    private static final int REQUEST_PERMISSION_TAKE_PICTURE = 5;
+    private static final int REQUEST_PERMISSION_CHOOSE_PICTURE = 6;
+    private static final int REQUEST_PERMISSION_TAKE_VIDEO = 7;
+    private static final int REQUEST_PERMISSION_CHOOSE_VIDEO = 8;
 
     private static final int IMAGE_TYPE = 0;
     private static final int VIDEO_TYPE = 1;
@@ -61,27 +71,32 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View v) {
         mFile = null;
         mFileUri = null;
+
+        boolean hasStoragePermission = Build.VERSION.SDK_INT < 23 || (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                == PackageManager.PERMISSION_GRANTED);
+        int requestCode = -1;
+
         switch (v.getId()) {
             case R.id.action_image_capture:
-                captureIntent(IMAGE_TYPE);
+                if (hasStoragePermission) captureIntent(IMAGE_TYPE);
+                else requestCode = REQUEST_PERMISSION_TAKE_PICTURE;
                 break;
             case R.id.action_choose_image:
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                    openDocumentIntent(IMAGE_TYPE);
-                } else {
-                    galleryIntent(IMAGE_TYPE);
-                }
+                if (hasStoragePermission) chooseIntent(IMAGE_TYPE);
+                else requestCode = REQUEST_PERMISSION_CHOOSE_PICTURE;
                 break;
             case R.id.action_take_video:
-                captureIntent(VIDEO_TYPE);
+                if (hasStoragePermission) captureIntent(VIDEO_TYPE);
+                else requestCode = REQUEST_PERMISSION_TAKE_PICTURE;
                 break;
             case R.id.action_choose_video:
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                    openDocumentIntent(VIDEO_TYPE);
-                } else {
-                    galleryIntent(VIDEO_TYPE);
-                }
+                if (hasStoragePermission) chooseIntent(VIDEO_TYPE);
+                else requestCode = REQUEST_PERMISSION_CHOOSE_VIDEO;
                 break;
+        }
+
+        if (requestCode > 0) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, requestCode);
         }
     }
 
@@ -111,12 +126,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    private void chooseIntent(int type) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            openDocumentIntent(type);
+        } else {
+            galleryIntent(type);
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.KITKAT)
     private void openDocumentIntent(int type) {
 
         String mimeType = type == VIDEO_TYPE ? "video/*" : "image/*";
 
-        // ACTION_OPEN_DOCUMENT is the intent to choose a file via the system's file
+        // ACTION_OPEN_DOCUMENT is the intent to chooseIntent a file via the system's file
         // browser.
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
 
@@ -173,6 +196,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } else {
                 textView.setText("ERROR");
             }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (!(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)) return;
+
+        switch (requestCode) {
+            case REQUEST_PERMISSION_TAKE_PICTURE:
+                captureIntent(IMAGE_TYPE);
+                break;
+            case REQUEST_PERMISSION_CHOOSE_PICTURE:
+                chooseIntent(IMAGE_TYPE);
+                break;
+            case REQUEST_PERMISSION_TAKE_VIDEO:
+                captureIntent(VIDEO_TYPE);
+                break;
+            case REQUEST_PERMISSION_CHOOSE_VIDEO:
+                chooseIntent(VIDEO_TYPE);
+                break;
         }
     }
 
@@ -255,7 +298,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private Uri getNewFileUri(Context context, int type) {
-        File mediaStorageDir = new File(getExternalFilesDir(null), "Media");
+        File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(DIRECTORY_DCIM), "Camera");
         if (!mediaStorageDir.exists()) {
             if (!mediaStorageDir.mkdirs()) {
                 Log.v("MainActivity", "failed to create directory");
