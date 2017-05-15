@@ -175,6 +175,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (resultCode == RESULT_OK ) {
             switch (requestCode) {
                 case REQUEST_CODE_TAKE_PHOTO_VIDEO: {
+                    mediaScan();
                     break;
                 }
                 case REQUEST_CODE_OPEN_DOCUMENT: {
@@ -312,5 +313,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Uri uri = FileProvider.getUriForFile(context, "com.example.fileprovider", mFile);
         Log.v("MainActivity", uri.toString());
         return uri;
+    }
+
+    private void mediaScan() {
+        if (mFile == null || !mFile.exists()) return;
+        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+        Uri contentUri = Uri.fromFile(mFile);
+        mediaScanIntent.setData(contentUri);
+        this.sendBroadcast(mediaScanIntent);
     }
 }
